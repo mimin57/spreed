@@ -27,6 +27,7 @@ export const SIGNALING = {
 export const CHAT = {
 	FETCH_LIMIT: 100,
 	MINIMUM_VISIBLE: 5,
+	HISTORY_LIMIT: 24 * 60 * 60, // 24 hours in seconds
 }
 
 export const CALL = {

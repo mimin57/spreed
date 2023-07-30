@@ -150,6 +150,30 @@ const getters = {
 		return getters.getLastKnownMessageId(token) < conversation.lastMessage.id
 	},
 
+	/**
+	 * Returns whether the conversation is in 'history' mode, which means that the current
+	 * message list contain message context which is older than <10 MINUTES>.
+	 * If true, the call to "lookForNewMessages" will be blocked.
+	 * TODO consider other parameters (timestamp, id difference, message distance)
+	 *
+	 * @param {object} state the state object.
+	 * @param {object} getters the getters object.
+	 * @return {boolean} true if context is old enough, false otherwise
+	 */
+	isConversationInHistoryMode: (state, getters) => (token) => {
+		const conversation = getters.conversation(token)
+		if (!conversation) {
+			return false
+		}
+
+		const lastKnownMessage = getters.message(token, getters.getLastKnownMessageId(token))
+		if (!lastKnownMessage) {
+			return false
+		}
+
+		return conversation.lastMessage.timestamp - lastKnownMessage.timestamp > CHAT.HISTORY_LIMIT
+	},
+
 	isMessageListPopulated: (state) => (token) => {
 		return !!state.loadedMessages[token]
 	},

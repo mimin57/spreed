@@ -51,10 +51,13 @@ get the messagesList array and loop through the list to generate the messages.
 				:next-message-id="item.nextMessageId" />
 		</template>
 
+		<!-- Loading messages placeholder -->
 		<template v-if="showLoadingAnimation">
 			<LoadingPlaceholder type="messages"
 				:count="15" />
 		</template>
+
+		<!-- No messages placeholder -->
 		<NcEmptyContent v-else-if="showEmptyContent"
 			:title="t('spreed', 'No messages')"
 			:description="t('spreed', 'All messages have expired or have been deleted.')">
@@ -62,6 +65,17 @@ get the messagesList array and loop through the list to generate the messages.
 				<Message :size="64" />
 			</template>
 		</NcEmptyContent>
+
+		<!-- History mode information -->
+		<!-- TODO proper wording -->
+		<div v-if="isConversationInHistoryMode" class="scroller__wrapper">
+			<div class="scroller__wrapper-content">
+				<span>{{ t('spreed', 'This conversation is in history mode') }}</span>
+				<NcButton @click="clearRouterHash">
+					{{ t('spreed', 'Load current history') }}
+				</NcButton>
+			</div>
+		</div>
 	</div>
 </template>
 
@@ -77,6 +91,7 @@ import { getCapabilities } from '@nextcloud/capabilities'
 import { subscribe, unsubscribe } from '@nextcloud/event-bus'
 import moment from '@nextcloud/moment'
 
+import NcButton from '@nextcloud/vue/dist/Components/NcButton.js'
 import NcEmptyContent from '@nextcloud/vue/dist/Components/NcEmptyContent.js'
 
 import LoadingPlaceholder from '../LoadingPlaceholder.vue'
@@ -93,6 +108,7 @@ export default {
 	components: {
 		LoadingPlaceholder,
 		Message,
+		NcButton,
 		NcEmptyContent,
 	},
 
@@ -214,6 +230,10 @@ export default {
 
 		hasMoreMessagesToLoad() {
 			return this.$store.getters.hasMoreMessagesToLoad(this.token)
+		},
+
+		isConversationInHistoryMode() {
+			return this.$store.getters.isConversationInHistoryMode(this.token)
 		},
 
 		/**
@@ -609,8 +629,11 @@ export default {
 
 				this.isInitialisingMessages = false
 
-				// get new messages
-				await this.lookForNewMessages()
+				if (!this.isConversationInHistoryMode) {
+					await this.lookForNewMessages()
+				} else {
+					this.$store.dispatch('cancelLookForNewMessages', { requestId: this.chatIdentifier })
+				}
 
 				if (this.loadChatInLegacyMode || focusMessageId === null) {
 					// don't scroll if lookForNewMessages was polling as we don't want
@@ -773,7 +796,8 @@ export default {
 			const tolerance = 10
 
 			// For chats, scrolled to bottom or / and fitted in one screen
-			if (scrollOffset < clientHeight + tolerance && scrollOffset > clientHeight - tolerance && !this.hasMoreMessagesToLoad) {
+			if (scrollOffset < clientHeight + tolerance && scrollOffset > clientHeight - tolerance
+				&& (!this.hasMoreMessagesToLoad || this.isConversationInHistoryMode)) {
 				this.setChatScrolledToBottom(true)
 				this.displayMessagesLoader = false
 				this.previousScrollTopValue = scrollTop
@@ -1089,29 +1113,32 @@ export default {
 				&& from.token === to.token
 				&& from.hash !== to.hash) {
 
+				// the hash is cleared, need to purge messages list and load new messages
+				if (this.isConversationInHistoryMode && !to.hash) {
+					await this.$store.dispatch('deleteMessages', this.token)
+					this.$nextTick(async () => {
+						await this.handleStartGettingMessagesPreconditions()
+					})
+				}
+
 				// the hash changed, need to focus/highlight another message
 				if (to.hash && to.hash.startsWith('#message_')) {
 					const focusedId = this.getMessageIdFromHash(to.hash)
 					if (this.messagesList.find(m => m.id === focusedId)) {
 						// need some delay (next tick is too short) to be able to run
-						// after the browser's native "scroll to anchor" from
-						// the hash
+						// after the browser's native "scroll to anchor" from the hash
 						window.setTimeout(() => {
 							// scroll to message in URL anchor
 							this.focusMessage(focusedId, true)
 						}, 2)
 					} else {
-						// Update environment around context to fill the gaps
-						this.$store.dispatch('setFirstKnownMessageId', {
-							token: this.token,
-							id: focusedId,
+						// the message is far from current list, need to purge messages list and load old messages
+						// TODO delete only for 'history' mode - need to know conditions (context timestamp)
+						this.$store.dispatch('deleteMessages', this.token)
+						this.$nextTick(async () => {
+							await this.handleStartGettingMessagesPreconditions()
+							this.focusMessage(focusedId, true)
 						})
-						this.$store.dispatch('setLastKnownMessageId', {
-							token: this.token,
-							id: focusedId,
-						})
-						await this.getMessageContext(focusedId)
-						this.focusMessage(focusedId, true)
 					}
 				}
 			}
@@ -1132,6 +1159,11 @@ export default {
 
 		messagesGroupComponent(group) {
 			return group.isSystemMessagesGroup ? MessagesSystemGroup : MessagesGroup
+		},
+
+		clearRouterHash() {
+			this.$router.push({ name: 'conversation', params: { token: this.token } })
+				.catch(err => console.debug(`Error while pushing the new conversation's route: ${err}`))
 		},
 	},
 }
@@ -1160,6 +1192,21 @@ export default {
 		height: 40px;
 		width: 40px;
 		transform: translatex(-64px);
+	}
+
+	&__wrapper {
+		max-width: 800px;
+		padding: 8px 0 8px 52px;
+		margin: 0 auto;
+
+		&-content {
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			gap: 8px;
+			padding-right: 140px;
+			color: var(--color-text-maxcontrast);
+		}
 	}
 }
 
