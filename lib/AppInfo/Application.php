@@ -50,6 +50,7 @@ use OCA\Talk\Events\BotInstallEvent;
 use OCA\Talk\Events\BotUninstallEvent;
 use OCA\Talk\Events\RoomEvent;
 use OCA\Talk\Events\SendCallNotificationEvent;
+use OCA\Talk\Federation\BeforeResourceTypesGetListener;
 use OCA\Talk\Federation\CloudFederationProviderTalk;
 use OCA\Talk\Files\Listener as FilesListener;
 use OCA\Talk\Files\TemplateLoader as FilesTemplateLoader;
@@ -104,6 +105,7 @@ use OCP\Group\Events\UserRemovedEvent;
 use OCP\IConfig;
 use OCP\IServerContainer;
 use OCP\IUser;
+use OCP\OCM\Events\BeforeResourceTypesGetEvent;
 use OCP\Security\CSP\AddContentSecurityPolicyEvent;
 use OCP\Security\FeaturePolicy\AddFeaturePolicyEvent;
 use OCP\Settings\IManager;
@@ -148,6 +150,7 @@ class Application extends App implements IBootstrap {
 		$context->registerEventListener(AttendeesAddedEvent::class, SystemMessageListener::class);
 		$context->registerEventListener(AttendeesRemovedEvent::class, SystemMessageListener::class);
 		$context->registerEventListener(SendCallNotificationEvent::class, NotificationListener::class);
+		$context->registerEventListener(BeforeResourceTypesGetEvent::class, BeforeResourceTypesGetListener::class);
 
 		$context->registerEventListener(CircleDestroyedEvent::class, CircleDeletedListener::class);
 		$context->registerEventListener(AddingCircleMemberEvent::class, CircleMembershipListener::class);
