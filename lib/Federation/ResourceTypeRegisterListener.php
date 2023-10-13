@@ -28,13 +28,13 @@ namespace OCA\Talk\Federation;
 use OCA\Talk\Config;
 use OCP\EventDispatcher\Event;
 use OCP\EventDispatcher\IEventListener;
-use OCP\OCM\Events\BeforeResourceTypesGetEvent;
+use OCP\OCM\Events\ResourceTypeRegisterEvent;
 use OCP\OCM\IOCMProvider;
 
 /**
  * @template-implements IEventListener<Event>
  */
-class BeforeResourceTypesGetListener implements IEventListener {
+class ResourceTypeRegisterListener implements IEventListener {
 
 	public function __construct(
 		protected Config $talkConfig,
@@ -44,7 +44,7 @@ class BeforeResourceTypesGetListener implements IEventListener {
 	}
 
 	public function handle(Event $event): void {
-		if (!$event instanceof BeforeResourceTypesGetEvent) {
+		if (!$event instanceof ResourceTypeRegisterEvent) {
 			// Unrelated
 			return;
 		}
@@ -53,12 +53,12 @@ class BeforeResourceTypesGetListener implements IEventListener {
 			return;
 		}
 
-		$resource = $this->provider->createNewResource();
-		$resource->setName(FederationManager::TALK_ROOM_RESOURCE)
-			->setShareTypes($this->talkProvider->getSupportedShareTypes())
-			->setProtocols([
+		$event->registerResourceType(
+			FederationManager::TALK_ROOM_RESOURCE,
+			$this->talkProvider->getSupportedShareTypes(),
+			[
 				'v4' => '/ocs/v2.php/apps/spreed/',
-			]);
-		$this->provider->addResourceType($resource);
+			]
+		);
 	}
 }
