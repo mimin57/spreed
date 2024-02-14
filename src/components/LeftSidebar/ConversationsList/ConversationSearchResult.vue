@@ -25,7 +25,7 @@
 		:key="item.token"
 		:name="item.displayName"
 		:title="item.displayName"
-		:active="item.token === selectedRoom"
+		:active="item.token === selectedRoom?.token"
 		:bold="!!item.unreadMessages"
 		:counter-number="item.unreadMessages"
 		:counter-type="counterType"

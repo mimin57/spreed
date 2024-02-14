@@ -118,7 +118,7 @@ export default {
 	},
 
 	methods: {
-		async setSelectedConversationToken(token) {
+		async setSelectedConversationToken({ token }) {
 			this.selectedConversationToken = token
 			try {
 				const response = await this.$store.dispatch('forwardMessage', {
