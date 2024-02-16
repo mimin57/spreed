@@ -35,7 +35,8 @@ get the messagesList array and loop through the list to generate the messages.
 		@scroll="debounceHandleScroll">
 		<div v-if="displayMessagesLoader" class="scroller__loading icon-loading" />
 
-		<ul v-for="item of dateSeparatorsOrdered"
+		<ul v-for="(item, index) of dateSeparatorsOrdered"
+			:key="index"
 			class="dates-group-wrapper">
 			<div :key="item" class="messages-group__date">
 				<span class="messages-group__date-text" role="heading" aria-level="3">
@@ -252,7 +253,7 @@ export default {
 		},
 
 		dateSeparatorsOrdered() {
-			const orderedList = this.dateSeparatorsList.sort((a, b) => {
+			const orderedList = [...this.dateSeparatorsList].sort((a, b) => {
 				return moment(a.date, 'YYYY-DDD').diff(moment(b.date, 'YYYY-DDD'))
 			})
 			return orderedList.map(item => item.dateSeparator)
